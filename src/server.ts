@@ -12,12 +12,15 @@
  * No filesystem endpoints, no shell/command execution, nothing beyond
  * these three routes.
  */
+import https from "node:https";
+import http from "node:http";
 import express, { type Request, type Response, type NextFunction } from "express";
 import { config } from "./config";
 import { logger } from "./logger";
 import { ensureQzConnected, isQzConnected, listQzPrinters, printViaQz } from "./qz";
 import { getLocalVersion } from "./version";
 import { beginJob, endJob } from "./jobLock";
+import { getOrCreateCert } from "./certs";
 
 const AGENT_NAME = "GrabvoPrintPing";
 
@@ -100,10 +103,24 @@ export function createServer() {
 
 export function startServer(): void {
   const app = createServer();
-  app.listen(config.port, config.host, () => {
-    logger.info(`${AGENT_NAME} v${getLocalVersion()} listening on http://${config.host}:${config.port}`);
+
+  const onListening = () => {
+    const scheme = config.enableHttps ? "https" : "http";
+    logger.info(`${AGENT_NAME} v${getLocalVersion()} listening on ${scheme}://${config.host}:${config.port}`);
+    if (config.enableHttps) {
+      logger.info(
+        "Self-signed HTTPS: on each device (including this PC's own browser), open the agent's URL once and accept the certificate warning before the web app can reach it."
+      );
+    }
     ensureQzConnected()
       .then(() => logger.info("QZ Tray connected on startup"))
       .catch((err) => logger.warn("QZ Tray not reachable on startup (will retry on next request):", err.message || err));
-  });
+  };
+
+  if (config.enableHttps) {
+    const { cert, key } = getOrCreateCert();
+    https.createServer({ cert, key }, app).listen(config.port, config.host, onListening);
+  } else {
+    http.createServer(app).listen(config.port, config.host, onListening);
+  }
 }

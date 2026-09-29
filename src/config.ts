@@ -44,4 +44,13 @@ export const config = {
   updateBranch: process.env.UPDATE_BRANCH || "main",
   autoUpdate: bool(process.env.AUTO_UPDATE, true),
   updateCheckIntervalMinutes: Number(process.env.UPDATE_CHECK_INTERVAL_MINUTES) || 360,
+
+  // HTTPS (self-signed, auto-generated on first run — see src/certs.ts).
+  // Needed so a phone browsing an HTTPS site (the Grabvo-Qz web app) can
+  // fetch this agent without hitting mixed-content/Private-Network-Access
+  // blocks. Each device still needs to open the agent's URL once and
+  // accept the browser's "not secure" warning — unavoidable for a
+  // self-signed cert on a LAN IP with no public CA behind it.
+  enableHttps: bool(process.env.ENABLE_HTTPS, true),
+  certDir: process.env.CERT_DIR || path.join(process.cwd(), "certs"),
 };

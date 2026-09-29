@@ -31,6 +31,42 @@ Grabvo-Qz browser app already calls — `/digital-certificate.txt` and
 `https://qz.grabvo.app`) — same SHA512 algorithm. The private key never
 leaves that server; this agent never has it, on disk or otherwise.
 
+## HTTPS
+
+On by default (`ENABLE_HTTPS=true`). The agent generates its own
+self-signed certificate on first run (`certs/agent-cert.pem` +
+`agent-key.pem`), covering `localhost`, `127.0.0.1`, and every LAN IP
+this machine currently has. It regenerates automatically if the
+machine picks up a new IP (e.g. a DHCP renewal or a different
+network).
+
+This is a **separate** certificate from QZ Tray's own — `src/qz.ts`
+still authenticates to QZ Tray exactly as before, via the same
+`/digital-certificate.txt` + `/sign-message` calls to
+`SIGNING_BASE_URL`. This one only wraps the agent's own `/status`,
+`/printers`, `/print` API in TLS.
+
+**Why**: the Grabvo-Qz web app is served over HTTPS. A browser will
+block or warn on a plain `http://` fetch from an HTTPS page to a LAN
+IP (mixed content, and increasingly Chrome's Private Network Access
+policy) — this is exactly what breaks phones more often than desktops
+(see the connectivity troubleshooting below).
+
+**The one unavoidable step**: because this is a self-signed
+certificate (no public domain/CA — just a LAN IP), every device that
+will talk to this agent — including the PC it's running on — has to
+open `https://<agent-ip>:PORT/status` in that browser **once** and
+click through the "Not secure" / "Advanced -> Proceed" warning to
+accept it. After that one visit, the web app's background requests to
+the same origin go through normally. There's no way to skip this step
+without a certificate signed by a public CA, which needs a real domain
+name pointed at this machine — not realistic for a LAN IP that can
+change.
+
+Set `ENABLE_HTTPS=false` in `.env` to go back to plain HTTP (no
+per-device trust step, but back to being blocked by stricter mobile
+browsers).
+
 ## API
 
 | Method | Path        | Purpose |
