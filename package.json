@@ -1,0 +1,35 @@
+{
+  "name": "grabvo-print-ping",
+  "private": true,
+  "version": "1.0.0",
+  "description": "GrabvoPrintPing — tiny transport bridge that forwards print jobs already built by the Grabvo-Qz web app to QZ Tray. Contains no receipt/ticket/print-layout logic of its own.",
+  "author": "maiz-an",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/maiz-an/Grabvo-P2.git"
+  },
+  "type": "commonjs",
+  "main": "dist/index.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "qz-tray": "^2.2.6",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.7.5",
+    "@types/ws": "^8.5.12",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.3"
+  }
+}

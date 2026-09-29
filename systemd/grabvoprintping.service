@@ -1,0 +1,19 @@
+[Unit]
+Description=GrabvoPrintPing - Grabvo print agent (QZ Tray bridge)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# install-linux.sh rewrites these two paths for the actual install location/user.
+WorkingDirectory=__INSTALL_DIR__
+ExecStart=/usr/bin/env node __INSTALL_DIR__/dist/index.js
+Restart=always
+RestartSec=5
+User=__SERVICE_USER__
+EnvironmentFile=-__INSTALL_DIR__/.env
+StandardOutput=append:/var/log/grabvoprintping.log
+StandardError=append:/var/log/grabvoprintping.log
+
+[Install]
+WantedBy=multi-user.target
