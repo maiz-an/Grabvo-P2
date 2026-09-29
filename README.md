@@ -3,7 +3,7 @@
 A tiny transport bridge. It contains **no** receipt/KOT/ticket
 formatting, layout, or business logic — that all stays in the
 Grabvo-Qz web app, exactly as it works today. This agent only
-forwards an already-built print job to QZ Tray..
+forwards an already-built print job to QZ Tray.
 
 ```
 Phone / Browser -> Grabvo-Qz web app -> GrabvoPrintPing -> QZ Tray -> Printer
@@ -52,20 +52,48 @@ IP (mixed content, and increasingly Chrome's Private Network Access
 policy) — this is exactly what breaks phones more often than desktops
 (see the connectivity troubleshooting below).
 
-**The one unavoidable step**: because this is a self-signed
-certificate (no public domain/CA — just a LAN IP), every device that
-will talk to this agent — including the PC it's running on — has to
-open `https://<agent-ip>:PORT/status` in that browser **once** and
-click through the "Not secure" / "Advanced -> Proceed" warning to
-accept it. After that one visit, the web app's background requests to
-the same origin go through normally. There's no way to skip this step
-without a certificate signed by a public CA, which needs a real domain
-name pointed at this machine — not realistic for a LAN IP that can
-change.
+**On the PC running the agent**: `scripts/install-windows.ps1` /
+`install-linux.sh` / `install-macos.sh` now trust the certificate
+automatically, system-wide, right after the service starts (Windows
+Trusted Root store via `certutil`, Linux via
+`update-ca-certificates`, macOS System keychain via `security
+add-trusted-cert`). Run the installer and that machine's own
+Chrome/Edge/Safari never shows a warning for this agent — no manual
+click needed there.
+
+**On every other device (phones, other PCs)**: a self-signed cert
+can't be silently trusted by a browser you haven't installed anything
+on — no code can bypass that, it's a deliberate browser/OS security
+boundary. Two ways to accept it, in order of how permanent you want it:
+
+1. **Install the certificate once** (recommended — survives across
+   browser tabs/restarts, not just one Chrome exception): on the
+   device, browse to `http://<agent-ip>:8766/cert` — a **plain HTTP**
+   port dedicated to just this download, so it works with zero TLS
+   warnings even before the device trusts anything — and install the
+   downloaded file as a trusted certificate:
+   - **Android**: Settings → Security → Encryption & credentials →
+     Install a certificate → CA certificate → pick the downloaded file.
+   - **iOS**: opening the link prompts "profile downloaded"; go to
+     Settings → General → VPN & Device Management → install the
+     profile, then Settings → General → About → Certificate Trust
+     Settings → enable full trust for it.
+   - **Windows/macOS (a second PC, not the one running the agent)**:
+     double-click the downloaded `.crt` → install into
+     Trusted Root Certification Authorities (Windows) or Keychain
+     Access, set to "Always Trust" (macOS).
+2. **Or just click through once**: open
+   `https://<agent-ip>:8765/status` and Advanced → Proceed. Faster,
+   but it's a per-browser exception — reinstalling the browser or
+   clearing site data loses it, unlike option 1.
+
+Either way, this is a **one-time step per device**, not something
+that happens on every print — after it, the web app's requests to the
+agent go through silently from then on.
 
 Set `ENABLE_HTTPS=false` in `.env` to go back to plain HTTP (no
-per-device trust step, but back to being blocked by stricter mobile
-browsers).
+per-device trust step at all, but back to being blocked by stricter
+mobile browsers' mixed-content rules).
 
 ## API
 

@@ -108,7 +108,7 @@ echo.
 echo Opening port 8765 in Windows Firewall...
 netsh advfirewall firewall show rule name="GrabvoPrintPing" >nul 2>&1
 if %errorLevel% NEQ 0 (
-    netsh advfirewall firewall add rule name="GrabvoPrintPing" dir=in action=allow protocol=TCP localport=8765 >nul
+    netsh advfirewall firewall add rule name="GrabvoPrintPing" dir=in action=allow protocol=TCP localport=8765,8766 >nul
 )
 
 :: ---- 5. NSSM (for the Windows Service) ----

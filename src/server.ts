@@ -8,12 +8,21 @@
  * POST /print     — { printerName, configOptions, data } exactly as
  *                    built by Grabvo-Qz's printHtml(); forwarded to
  *                    QZ Tray unmodified.
+ * GET  /cert      — downloads the agent's self-signed cert (PEM), so a
+ *                    device can install it as a trusted certificate
+ *                    instead of clicking through a browser warning
+ *                    every time. Also served plain HTTP on
+ *                    certPort (default mainPort+1) so it can be
+ *                    fetched before that device has any reason to
+ *                    trust this agent's HTTPS yet.
  *
- * No filesystem endpoints, no shell/command execution, nothing beyond
- * these three routes.
+ * No filesystem endpoints beyond that one read-only cert download, no
+ * shell/command execution, nothing beyond these routes.
  */
 import https from "node:https";
 import http from "node:http";
+import fs from "node:fs";
+import path from "node:path";
 import express, { type Request, type Response, type NextFunction } from "express";
 import { config } from "./config";
 import { logger } from "./logger";
@@ -42,6 +51,14 @@ export function createServer() {
   app.use((req: Request, res: Response, next: NextFunction) => {
     if (req.method === "OPTIONS") return res.sendStatus(204);
     next();
+  });
+
+  app.get("/cert", (_req: Request, res: Response) => {
+    const certPath = path.join(config.certDir, "agent-cert.pem");
+    if (!fs.existsSync(certPath)) return res.status(404).json({ error: "No certificate generated yet" });
+    res.setHeader("Content-Type", "application/x-x509-ca-cert");
+    res.setHeader("Content-Disposition", 'attachment; filename="grabvoprintping.crt"');
+    res.send(fs.readFileSync(certPath));
   });
 
   app.get("/status", async (_req: Request, res: Response) => {
@@ -101,6 +118,30 @@ export function createServer() {
   return app;
 }
 
+/**
+ * A tiny plain-HTTP-only server whose only route is the cert download.
+ * Reachable with zero TLS warnings (it isn't TLS at all), so a brand
+ * new device can grab the certificate and install it as trusted
+ * *before* it has any reason yet to trust the main HTTPS API. Serves
+ * nothing else — no /print, no /printers, nothing that needs trust.
+ */
+function startCertServer(): void {
+  const certApp = express();
+  certApp.disable("x-powered-by");
+  certApp.get("/cert", (_req: Request, res: Response) => {
+    const certPath = path.join(config.certDir, "agent-cert.pem");
+    if (!fs.existsSync(certPath)) return res.status(404).send("No certificate generated yet");
+    res.setHeader("Content-Type", "application/x-x509-ca-cert");
+    res.setHeader("Content-Disposition", 'attachment; filename="grabvoprintping.crt"');
+    res.send(fs.readFileSync(certPath));
+  });
+  certApp.use((_req: Request, res: Response) => res.status(404).send("Not found"));
+
+  http.createServer(certApp).listen(config.certPort, config.host, () => {
+    logger.info(`Certificate download available (plain HTTP, no trust needed) at http://${config.host}:${config.certPort}/cert`);
+  });
+}
+
 export function startServer(): void {
   const app = createServer();
 
@@ -109,7 +150,7 @@ export function startServer(): void {
     logger.info(`${AGENT_NAME} v${getLocalVersion()} listening on ${scheme}://${config.host}:${config.port}`);
     if (config.enableHttps) {
       logger.info(
-        "Self-signed HTTPS: on each device (including this PC's own browser), open the agent's URL once and accept the certificate warning before the web app can reach it."
+        `Self-signed HTTPS: on each new device, first visit http://${config.host}:${config.certPort}/cert to download+install the certificate as trusted (see README) — or just open https://<this-ip>:${config.port}/status once and click through the browser warning.`
       );
     }
     ensureQzConnected()
@@ -120,6 +161,7 @@ export function startServer(): void {
   if (config.enableHttps) {
     const { cert, key } = getOrCreateCert();
     https.createServer({ cert, key }, app).listen(config.port, config.host, onListening);
+    startCertServer();
   } else {
     http.createServer(app).listen(config.port, config.host, onListening);
   }

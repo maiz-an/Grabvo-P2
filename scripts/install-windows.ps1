@@ -76,7 +76,33 @@ $distEntry = Join-Path $InstallDir "dist\index.js"
 & $nssm start $ServiceName
 
 Write-Host ""
+Write-Host "Opening firewall ports (8765 API, 8766 cert download)..."
+if (-not (Get-NetFirewallRule -DisplayName "GrabvoPrintPing" -ErrorAction SilentlyContinue)) {
+    New-NetFirewallRule -DisplayName "GrabvoPrintPing" -Direction Inbound -Protocol TCP -LocalPort 8765,8766 -Action Allow | Out-Null
+}
+
+Write-Host ""
+Write-Host "Trusting the agent's self-signed certificate on THIS PC (so Chrome/Edge here never shows a warning for it)..."
+$certPath = Join-Path $InstallDir "certs\agent-cert.pem"
+$waited = 0
+while (-not (Test-Path $certPath) -and $waited -lt 15) {
+    Start-Sleep -Seconds 1
+    $waited++
+}
+if (Test-Path $certPath) {
+    certutil -addstore -f "ROOT" $certPath | Out-Null
+    Write-Host "Certificate trusted system-wide on this PC. https://localhost:8765 (and this PC's own LAN IP) will show no warning here."
+} else {
+    Write-Host "Certificate wasn't generated yet (service may still be starting) — trust it manually later:"
+    Write-Host "  certutil -addstore -f `"ROOT`" `"$certPath`""
+}
+
+Write-Host ""
 Write-Host "GrabvoPrintPing installed and started as a Windows Service ('$ServiceName')."
 Write-Host "Status:  Get-Service $ServiceName"
 Write-Host "Logs:    Get-Content '$InstallDir\grabvoprintping.log' -Wait"
 Write-Host "Stop:    nssm stop $ServiceName"
+Write-Host ""
+Write-Host "Other devices (phones) still need to install the certificate once -"
+Write-Host "point their browser at http://THIS-PC-IP:8766/cert to download it,"
+Write-Host "then install it as a trusted certificate (see README.md)."

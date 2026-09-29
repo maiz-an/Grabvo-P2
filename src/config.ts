@@ -53,4 +53,8 @@ export const config = {
   // self-signed cert on a LAN IP with no public CA behind it.
   enableHttps: bool(process.env.ENABLE_HTTPS, true),
   certDir: process.env.CERT_DIR || path.join(process.cwd(), "certs"),
+  // Plain-HTTP-only port that serves just the cert download (/cert),
+  // so a new device can fetch it with zero TLS warnings. Defaults to
+  // one above the main port.
+  certPort: Number(process.env.CERT_PORT) || (Number(process.env.PORT) || 8765) + 1,
 };
