@@ -48,6 +48,43 @@ this side).
 
 No filesystem endpoints, no command execution. `/print` only prints.
 
+## One-click install (fresh PC, any OS)
+
+`bootstrap/` holds two link-friendly installers — download Node.js if
+it's missing, download+build GrabvoPrintPing, and register it as a
+background service, with nothing typed by hand:
+
+- **Windows**: `bootstrap/GrabvoPrintPing-Setup.cmd` — self-elevating
+  (same pattern as this repo's own `Qz-Grabvo.cmd`), installs Node via
+  `winget` (or the official MSI as a fallback), downloads and builds
+  the agent, opens the firewall port, downloads NSSM, and registers +
+  starts the Windows Service.
+- **macOS/Linux**: `bootstrap/install.sh` — installs Node via
+  `apt`/`dnf`/`yum` (Linux) or Homebrew (macOS), downloads and builds
+  the agent, then runs `scripts/install-linux.sh` or
+  `scripts/install-macos.sh`.
+
+Both download the agent from `GRABVO_DOWNLOAD_URL`, which defaults to
+`https://qz.grabvo.app/downloads/GrabvoPrintPing.zip`. **For the "just
+click a link" experience to work, that zip (and, for macOS/Linux, the
+`install.sh` script itself) needs to be hosted there** — same as this
+project's `Qz-Grabvo.cmd` is already served from Grabvo-Qz's own
+`public/` folder. To wire that up:
+
+1. Zip this project (excluding `node_modules`/`dist`) and upload it to
+   Grabvo-Qz's `public/downloads/GrabvoPrintPing.zip`.
+2. Upload `bootstrap/GrabvoPrintPing-Setup.cmd` to
+   `public/GrabvoPrintPing-Setup.cmd` and `bootstrap/install.sh` to
+   `public/install-grabvoprintping.sh` in that same repo.
+3. Link to them from the web app the same way `WindowsSetup` in
+   `SetupPanel.tsx` links to `Qz-Grabvo.cmd` (download button ->
+   `./GrabvoPrintPing-Setup.cmd`); for macOS/Linux, the install command
+   is `curl -fsSL https://qz.grabvo.app/install-grabvoprintping.sh | bash`.
+
+Once that's live, installing on a fresh PC is one download + one run —
+no manual Node install, no manual `npm install`/`build`, no manually
+running the platform install script.
+
 ## Development
 
 ```bash
