@@ -3,7 +3,7 @@
 A tiny transport bridge. It contains **no** receipt/KOT/ticket
 formatting, layout, or business logic — that all stays in the
 Grabvo-Qz web app, exactly as it works today. This agent only
-forwards an already-built print job to QZ Tray.
+forwards an already-built print job to QZ Tray..
 
 ```
 Phone / Browser -> Grabvo-Qz web app -> GrabvoPrintPing -> QZ Tray -> Printer
